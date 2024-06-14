@@ -8,7 +8,7 @@
 ############              IMPORTS                        ############
 import os
 #import customtkinter as ctk # using tkinter or customtkinter?
-import tkinter as ctk
+import customtkinter as ctk
 import time
 
 ############              GLOBAL VARIABLES               ############
@@ -22,7 +22,7 @@ STEPPER_HIGH = 100
 
 
 ############              CLASSES                        ############
-class FullscreenApp(ctk.Tk):
+class FullscreenApp(ctk.CTk):
     """Main App that is running on the RaspberryPi 4B"""
 
     def __init__(self):
@@ -40,11 +40,11 @@ class FullscreenApp(ctk.Tk):
         #self.attributes("-fullscreen", True)  # Set to fullscreen
         
         # Main content frame
-        self.main_frame = ctk.Frame(self)
+        self.main_frame = ctk.CTkFrame(self)
         self.main_frame.pack(fill="both", expand=True)
 
         # Bottom bar frame
-        self.bottom_bar = ctk.Frame(self.main_frame)
+        self.bottom_bar = ctk.CTkFrame(self.main_frame)
         self.bottom_bar.pack(side="bottom", fill="x")
         # Configure grid layout for the bottom bar
         self.bottom_bar.columnconfigure((0, 1, 2, 3, 4), weight=1)
@@ -60,20 +60,20 @@ class FullscreenApp(ctk.Tk):
 
         # Add four buttons to the bottom bar
         # Blinds Button to activate the blinds control
-        blinds_button = ctk.Button(self.bottom_bar, text="blinds", command=self.blinds_button_action)
+        blinds_button = ctk.CTkButton(self.bottom_bar, text="blinds", command=self.blinds_button_action)
         blinds_button.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
         # Rooms Button to activate the Rooms Temperatur and Humidity Overview
         # NOT WORKING RIGHT NOW!
-        rooms_button = ctk.Button(self.bottom_bar, text="rooms", command=self.rooms_button_action)
+        rooms_button = ctk.CTkButton(self.bottom_bar, text="rooms", command=self.rooms_button_action)
         rooms_button.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
         # Sleep Button to activate the screen saver
-        sleep_button = ctk.Button(self.bottom_bar, text="sleep", command=self.sleep_button_action)
+        sleep_button = ctk.CTkButton(self.bottom_bar, text="sleep", command=self.sleep_button_action)
         sleep_button.grid(row=0, column=2, padx=10, pady=10, sticky="ew")
         # Debug Button to show Debug logs
-        debug_button = ctk.Button(self.bottom_bar, text="Debug", command=self.debug_button_action)
+        debug_button = ctk.CTkButton(self.bottom_bar, text="Debug", command=self.debug_button_action)
         debug_button.grid(row=0, column=3, padx=10, pady=10, sticky="ew")
         # Close Button to exit the Programm
-        close_button = ctk.Button(self.bottom_bar, text="Close", command=self.close_app)
+        close_button = ctk.CTkButton(self.bottom_bar, text="Close", command=self.close_app)
         close_button.grid(row=0, column=4, padx=10, pady=10, sticky="ew")
 
     def blinds_button_action(self):
@@ -95,29 +95,29 @@ class FullscreenApp(ctk.Tk):
     ############              BLINDS                ############
     def create_blinds_context(self):
         # create the ctk frame
-        frame = ctk.Frame(self.main_frame)
+        frame = ctk.CTkFrame(self.main_frame)
         frame.columnconfigure(0, weight=1)
         frame.rowconfigure((0, 1, 2, 3), weight=1)
         # SLIDER 1
-        blind1_slider = ctk.Scale(frame, from_=STEPPER_LOW, to=STEPPER_HIGH, command=self.update_slider_label, orient=ctk.HORIZONTAL)
+        blind1_slider = ctk.CTkSlider(frame, from_=STEPPER_LOW, to=STEPPER_HIGH, command=self.update_slider_label)
         blind1_slider.grid(row=0, column=0, padx=20, pady=20, sticky="ew")
         self.obj_slider1 = blind1_slider
         # LABEL 1
-        blind1_label = ctk.Label(frame, text=self.slider1)
+        blind1_label = ctk.CTkLabel(frame, text=self.slider1)
         blind1_label.grid(row=0, column=1)
         self.slider1_lable = blind1_label
         # SYNCH VAL BUTTON
-        synch_blinds_button = ctk.Button(frame, text="Sync Blinds", command=self.sync_blinds)
+        synch_blinds_button = ctk.CTkButton(frame, text="Sync Blinds", command=self.sync_blinds)
         synch_blinds_button.grid(row=1, column=0, padx=20, pady=20)
         # SEND VAL BUTTON
-        send_blinds_button = ctk.Button(frame, text="Set Blinds", command=self.set_blinds)
+        send_blinds_button = ctk.CTkButton(frame, text="Set Blinds", command=self.set_blinds)
         send_blinds_button.grid(row=1, column=1, padx=20, pady=20)
         # SLIDER 2
-        blind2_slider = ctk.Scale(frame, from_=STEPPER_LOW, to=STEPPER_HIGH, command=self.update_slider_label, orient=ctk.HORIZONTAL)
+        blind2_slider = ctk.CTkSlider(frame, from_=STEPPER_LOW, to=STEPPER_HIGH, command=self.update_slider_label)
         blind2_slider.grid(row=2, column=0, padx=20, pady=20, sticky="ew")
-        Scalebj_slider2 = blind2_slider
+        self.obj_slider2 = blind2_slider
         # LABEL 2
-        blind2_label = ctk.Label(frame, text=self.slider2)
+        blind2_label = ctk.CTkLabel(frame, text=self.slider2)
         blind2_label.grid(row=2, column=1)
         self.slider2_lable = blind2_label
 
@@ -142,22 +142,22 @@ class FullscreenApp(ctk.Tk):
 
     ############              ROOMS                ############
     def create_rooms_context(self):
-        frame = ctk.Frame(self.main_frame)
-        label = ctk.Label(frame, text="This is Rooms")
+        frame = ctk.CTkFrame(self.main_frame)
+        label = ctk.CTkLabel(frame, text="This is Rooms")
         label.pack(pady=20)
         return frame
     
     ############              SLEEP                ############
     def create_sleep_context(self):
-        frame = ctk.Frame(self.main_frame)
-        label = ctk.Label(frame, text="This is sleep")
+        frame = ctk.CTkFrame(self.main_frame)
+        label = ctk.CTkLabel(frame, text="This is sleep")
         label.pack(pady=20)
         return frame
     
     ############              DEBUG                ############
     def create_debug_context(self):
-        frame = ctk.Frame(self.main_frame)
-        label = ctk.Label(frame, text="This is Debug")
+        frame = ctk.CTkFrame(self.main_frame)
+        label = ctk.CTkLabel(frame, text="This is Debug")
         label.pack(pady=20)
         return frame
 
