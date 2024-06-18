@@ -119,6 +119,7 @@ class FullscreenApp(ctk.CTk):
 
     def debug_button_action(self):
         if Debug: print("Debug Button pressed")
+        self.update_debug_context()
         self.show_debug_context()
     
     ############              BLINDS                ############
@@ -163,6 +164,7 @@ class FullscreenApp(ctk.CTk):
         if Debug:
             print(f"set blinds")
             print(f"    Blind1: {blind1}\n    Blind2: {blind2}")
+        write_log_file(f"SENDING BLINDS POSITION - PICO 1: {blind1} PICO2: {blind2}")
 
     def sync_blinds(self):
         if Debug: print(f"synchronize blinds")
@@ -185,10 +187,22 @@ class FullscreenApp(ctk.CTk):
     
     ############              DEBUG                ############
     def create_debug_context(self):
+        # create the ctk frame
         frame = ctk.CTkFrame(self.main_frame)
-        label = ctk.CTkLabel(frame, text="This is Debug")
-        label.pack(pady=20)
+        frame.columnconfigure(0, weight=1)
+        frame.rowconfigure((0, 1), weight=1)
+
+        label = ctk.CTkLabel(frame, text=read_log_file())
+        label.grid(row=0,column=0,pady=20, sticky='w')
+        self.obj_debug_label = label
+
+        save_button = ctk.CTkButton(frame, text="Save Logfile", command=save_log_file_as_new)
+        save_button.grid(row=0, column=1, padx=10, pady=20, sticky="w")
+
         return frame
+
+    def update_debug_context(self):
+        self.obj_debug_label.configure(text=read_log_file())
 
     ############         SHOW CONTEXTS             ############
     def show_blinds_context(self):
@@ -234,19 +248,19 @@ class FullscreenApp(ctk.CTk):
             self.obj_conneciton_label.configure(text=f"PICO 1: {self.connection_pico_one}    PICO 2: {self.connection_pico_two}") # update the label accordingly
 
             self.FIRST_PICO_CHECKED = False
-            self.after(ONE_SECOND, self.check_connection_to_pico) # call the function again to check the other pico
+            self.after(HALF_MINUTE, self.check_connection_to_pico) # call the function again to check the other pico
 
         elif self.FIRST_PICO_CHECKED == False:
             if Debug: print(f"Checking connection to Pico 1")
-            write_log_file(f"Checking connection to Pico 1")
             self.connection_pico_two = "True"
             self.obj_conneciton_label.configure(text=f"PICO 1: {self.connection_pico_one}    PICO 2: {self.connection_pico_two}")
 
             self.FIRST_PICO_CHECKED = True
-            self.after(ONE_SECOND, self.check_connection_to_pico) # call the function again to check the other pico
+            self.after(HALF_MINUTE, self.check_connection_to_pico) # call the function again to check the other pico
 
         else:
             if Debug: print(f"EXCEPTION")
+            write_log_file(f"WARNING - CONNECTIVITY! PICO1: {self.connection_pico_one}      PICO2: {self.connection_pico_two}")
             self.after(HALF_MINUTE, self.check_connection_to_pico)
 
     ############              CLOSE                ############
@@ -257,16 +271,33 @@ class FullscreenApp(ctk.CTk):
 ############              FUNCTIONS                      ############
 
 def create_log_file():
+    if Debug: print("Creating Log File")
     log_file = open("debug.txt", 'w') # create the file
-    log_file.write(f"{time.strftime('%d.%M.%Y | %H : %M : %S')} | Create Debug File\n")
+    log_file.write(f"{time.strftime('%d.%m.%Y | %H : %M : %S')} | Create Debug File\n")
     log_file.close()
 
 def write_log_file(text):
-    str_to_write = f"{time.strftime('%d.%M.%Y | %H : %M : %S')} | " + text + "\n"
+    if Debug: print("Writing to Log File")
+    str_to_write = f"{time.strftime('%d.%m.%Y | %H : %M : %S')} | " + text + "\n"
     log_file = open("debug.txt", 'a+') # append to the file
     log_file.write(str_to_write)
     log_file.close()
 
+def read_log_file():
+    if Debug: print("Reading from Log File")
+    log_file = open("debug.txt", 'r')
+    text = log_file.read()
+    return text
+
+def save_log_file_as_new():
+    if Debug: print("Saving new Log File")
+    log_file = open("debug.txt", 'r')
+    text = log_file.read()
+    log_file.close()
+
+    new_f = open("saved_debug.txt", 'w')
+    new_f.write(text)
+    new_f.close()
 ############              MAIN                           ############
 def main():
     # create a log file
@@ -274,6 +305,6 @@ def main():
     create_log_file()
     app = FullscreenApp()
     app.mainloop()
-
+    
 if __name__ == "__main__":
     main()
