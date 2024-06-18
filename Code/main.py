@@ -20,6 +20,9 @@ SCREEN_HIGHT = 600
 STEPPER_LOW = 0
 STEPPER_HIGH = 100
 
+ONE_MINUTE = 60*1000
+HALF_MINUTE = int(ONE_MINUTE/2)
+ONE_SECOND = 1000
 
 ############              CLASSES                        ############
 class FullscreenApp(ctk.CTk):
@@ -33,6 +36,11 @@ class FullscreenApp(ctk.CTk):
         self.obj_slider2 = None
         self.slider1_lable = None # Variable storing the objects of the labels
         self.slider2_lable = None
+        self.last_time = 0
+        self.time_disp = 0
+        self.connection_pico_one = "True"
+        self.connection_pico_two = "True"
+        self.FIRST_PICO_CHECKED = False
         ############              CTK INIT                ############
         super().__init__()
         self.title("HomeSysHub")
@@ -43,20 +51,34 @@ class FullscreenApp(ctk.CTk):
         self.main_frame = ctk.CTkFrame(self)
         self.main_frame.pack(fill="both", expand=True)
 
-        # Bottom bar frame
-        self.bottom_bar = ctk.CTkFrame(self.main_frame)
-        self.bottom_bar.pack(side="bottom", fill="x")
-        # Configure grid layout for the bottom bar
-        self.bottom_bar.columnconfigure((0, 1, 2, 3, 4), weight=1)
-
         # Create different contexts (frames) for different pages
         self.blinds_context = self.create_blinds_context()
         self.rooms_context = self.create_rooms_context()
         self.sleep_context = self.create_sleep_context()
         self.debug_context = self.create_debug_context()
 
-        # show first context by default
-        #self.show_blinds_context()
+        # Top bar frame
+        self.top_bar = ctk.CTkFrame(self.main_frame)
+        self.top_bar.pack(side="top", fill="x")
+        self.top_bar.columnconfigure((0,1,2), weight=1)
+
+        # Add Time to the top bar
+        self.time_label = ctk.CTkLabel(self.top_bar, text=f"{time.strftime('%H : %M')}")
+        self.time_label.grid(row=0, column=2, padx=10, pady=10, sticky="e")
+        self.obj_time_label = self.time_label # gets the obj
+        self.update_time()
+
+        # Add Connection status to the top bar
+        # Add Time to the top bar
+        self.conneciton_label = ctk.CTkLabel(self.top_bar, text=f"PICO 1: {self.connection_pico_one}    PICO 2: {self.connection_pico_two}")
+        self.conneciton_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        self.obj_conneciton_label = self.conneciton_label # gets the obj
+
+        # Bottom bar frame
+        self.bottom_bar = ctk.CTkFrame(self.main_frame)
+        self.bottom_bar.pack(side="bottom", fill="x")
+        # Configure grid layout for the bottom bar
+        self.bottom_bar.columnconfigure((0, 1, 2, 3, 4), weight=1)
 
         # Add four buttons to the bottom bar
         # Blinds Button to activate the blinds control
@@ -67,14 +89,21 @@ class FullscreenApp(ctk.CTk):
         rooms_button = ctk.CTkButton(self.bottom_bar, text="rooms", command=self.rooms_button_action)
         rooms_button.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
         # Sleep Button to activate the screen saver
+        # NOT WORKING RIGHT NOW!
         sleep_button = ctk.CTkButton(self.bottom_bar, text="sleep", command=self.sleep_button_action)
         sleep_button.grid(row=0, column=2, padx=10, pady=10, sticky="ew")
         # Debug Button to show Debug logs
+        # NOT WORKING RIGHT NOW!
         debug_button = ctk.CTkButton(self.bottom_bar, text="Debug", command=self.debug_button_action)
         debug_button.grid(row=0, column=3, padx=10, pady=10, sticky="ew")
         # Close Button to exit the Programm
         close_button = ctk.CTkButton(self.bottom_bar, text="Close", command=self.close_app)
         close_button.grid(row=0, column=4, padx=10, pady=10, sticky="ew")
+
+        ############              CONNECTION TO PICO     ############
+        self.check_connection_to_pico()
+
+    ############              METHODS                ############
 
     def blinds_button_action(self):
         if Debug: print("Blinds Button pressed")
@@ -99,7 +128,7 @@ class FullscreenApp(ctk.CTk):
         frame.columnconfigure(0, weight=1)
         frame.rowconfigure((0, 1, 2, 3), weight=1)
         # SLIDER 1
-        blind1_slider = ctk.CTkSlider(frame, from_=STEPPER_LOW, to=STEPPER_HIGH, command=self.update_slider_label)
+        blind1_slider = ctk.CTkSlider(frame, from_=STEPPER_LOW, to=STEPPER_HIGH, command=self.update_slider_label, number_of_steps=100)
         blind1_slider.grid(row=0, column=0, padx=20, pady=20, sticky="ew")
         self.obj_slider1 = blind1_slider
         # LABEL 1
@@ -110,10 +139,10 @@ class FullscreenApp(ctk.CTk):
         synch_blinds_button = ctk.CTkButton(frame, text="Sync Blinds", command=self.sync_blinds)
         synch_blinds_button.grid(row=1, column=0, padx=20, pady=20)
         # SEND VAL BUTTON
-        send_blinds_button = ctk.CTkButton(frame, text="Set Blinds", command=self.set_blinds)
+        send_blinds_button = ctk.CTkButton(frame, text="Set Blinds", command=self.send_blinds_val)
         send_blinds_button.grid(row=1, column=1, padx=20, pady=20)
         # SLIDER 2
-        blind2_slider = ctk.CTkSlider(frame, from_=STEPPER_LOW, to=STEPPER_HIGH, command=self.update_slider_label)
+        blind2_slider = ctk.CTkSlider(frame, from_=STEPPER_LOW, to=STEPPER_HIGH, command=self.update_slider_label, number_of_steps=100)
         blind2_slider.grid(row=2, column=0, padx=20, pady=20, sticky="ew")
         self.obj_slider2 = blind2_slider
         # LABEL 2
@@ -121,14 +150,14 @@ class FullscreenApp(ctk.CTk):
         blind2_label.grid(row=2, column=1)
         self.slider2_lable = blind2_label
 
+        self.update_slider_label()
         return frame
 
     def update_slider_label(self,v1=0):
-        if Debug: print("update slider label")
         self.slider1_lable.configure(text= round(self.obj_slider1.get(), 2))
         self.slider2_lable.configure(text= round(self.obj_slider2.get(), 2))
 
-    def set_blinds(self):
+    def send_blinds_val(self):
         blind1 = self.obj_slider1.get()
         blind2 = self.obj_slider2.get()
         if Debug:
@@ -184,6 +213,42 @@ class FullscreenApp(ctk.CTk):
         self.sleep_context.pack_forget()
         self.debug_context.pack_forget()
 
+    ############              TIME                ############
+    def update_time(self):
+        if Debug: print("Checking Time")
+        self.obj_time_label.configure(text=f"{time.strftime('%H : %M')}") # adjust the label to show the correct time
+
+        self.top_bar.after(ONE_MINUTE, self.update_time) # call this function again after one minute
+
+    ############              CONNECTION TO PICO   ############
+
+    def check_connection_to_pico(self):
+        if self.FIRST_PICO_CHECKED == True:
+            if Debug: print(f"Checking connection to Pico 2")
+            # ping the pico
+
+            # await response
+
+            # evaluate response
+            self.connection_pico_two = "Bad"
+            self.obj_conneciton_label.configure(text=f"PICO 1: {self.connection_pico_one}    PICO 2: {self.connection_pico_two}") # update the label accordingly
+
+            self.FIRST_PICO_CHECKED = False
+            self.after(ONE_SECOND, self.check_connection_to_pico) # call the function again to check the other pico
+
+        elif self.FIRST_PICO_CHECKED == False:
+            if Debug: print(f"Checking connection to Pico 1")
+            write_log_file(f"Checking connection to Pico 1")
+            self.connection_pico_two = "True"
+            self.obj_conneciton_label.configure(text=f"PICO 1: {self.connection_pico_one}    PICO 2: {self.connection_pico_two}")
+
+            self.FIRST_PICO_CHECKED = True
+            self.after(ONE_SECOND, self.check_connection_to_pico) # call the function again to check the other pico
+
+        else:
+            if Debug: print(f"EXCEPTION")
+            self.after(HALF_MINUTE, self.check_connection_to_pico)
+
     ############              CLOSE                ############
     def close_app(self):
         if Debug: print("Exiting the Programm")
@@ -191,9 +256,22 @@ class FullscreenApp(ctk.CTk):
 
 ############              FUNCTIONS                      ############
 
+def create_log_file():
+    log_file = open("debug.txt", 'w') # create the file
+    log_file.write(f"{time.strftime('%d.%M.%Y | %H : %M : %S')} | Create Debug File\n")
+    log_file.close()
+
+def write_log_file(text):
+    str_to_write = f"{time.strftime('%d.%M.%Y | %H : %M : %S')} | " + text + "\n"
+    log_file = open("debug.txt", 'a+') # append to the file
+    log_file.write(str_to_write)
+    log_file.close()
 
 ############              MAIN                           ############
 def main():
+    # create a log file
+    # run the App
+    create_log_file()
     app = FullscreenApp()
     app.mainloop()
 
